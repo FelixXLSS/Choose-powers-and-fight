@@ -1,0 +1,350 @@
+local Library = loadstring(Game:HttpGet("https://raw.githubusercontent.com/bloodball/-back-ups-for-libs/main/wizard"))()
+
+local PhantomForcesWindow = Library:NewWindow("FelixZLS Choose powers and fight💥")
+
+local KillingCheats = PhantomForcesWindow:NewSection("Instant Actions💫")
+
+KillingCheats:CreateButton("Instant Luck Block🎉⁉️", function()
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+local HRP = Character:WaitForChild("HumanoidRootPart")
+
+-- Guardar posición y orientación originales
+local originalPosition = HRP.Position
+local originalOrientation = HRP.Orientation
+
+local function getClosestLuckyBlockPrompt()
+    local closestPrompt = nil
+    local shortestDistance = math.huge
+
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        if obj:IsA("ProximityPrompt") and obj.Parent:IsA("BasePart") then
+            local part = obj.Parent
+            local model = part:FindFirstAncestorOfClass("Model") or part
+            if model.Name == "LuckyBlock" then
+                local dist = (part.Position - originalPosition).Magnitude
+                if dist < shortestDistance then
+                    shortestDistance = dist
+                    closestPrompt = obj
+                end
+            end
+        end
+    end
+    return closestPrompt
+end
+
+local prompt = getClosestLuckyBlockPrompt()
+if prompt then
+    local targetPart = prompt.Parent
+
+    -- Teletransportar al LuckyBlock (con altura)
+    HRP.CFrame = CFrame.new(targetPart.Position + Vector3.new(0, 3, 0), targetPart.Position)
+
+    task.wait(0.05) -- Breve pausa para que el cambio se registre
+
+    fireproximityprompt(prompt)
+    print("ProximityPrompt activado en:", prompt:GetFullName())
+
+    -- Volver instantáneamente a la posición original
+    HRP.CFrame = CFrame.new(originalPosition) * CFrame.Angles(
+        math.rad(originalOrientation.X),
+        math.rad(originalOrientation.Y),
+        math.rad(originalOrientation.Z)
+    )
+    print("Regresaste a la posición original.")
+else
+    warn("No se encontró ningún LuckyBlock con ProximityPrompt.")
+end
+end)
+
+local KillingCheats = PhantomForcesWindow:NewSection("automatic🤖👑")
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+
+local localPlayer = Players.LocalPlayer
+local attackEnabled = false
+local auraEffectMain = nil
+local auraEffectInner = nil
+local auraFollowConnection = nil
+local attackLoop = nil
+
+local DelayTime = 0.1
+
+local function createAura()
+    local character = localPlayer.Character
+    if not character or not character:FindFirstChild("HumanoidRootPart") then return end
+    local root = character.HumanoidRootPart
+
+    -- Esfera roja grande
+    local redAura = Instance.new("Part")
+    redAura.Shape = Enum.PartType.Ball
+    redAura.Anchored = true
+    redAura.CanCollide = false
+    redAura.Transparency = 0.4
+    redAura.Material = Enum.Material.Neon
+    redAura.Color = Color3.fromRGB(255, 0, 0)
+    redAura.Size = Vector3.new(1, 1, 1)
+    redAura.Name = "AuraEffectMain"
+    redAura.Parent = workspace
+
+    TweenService:Create(redAura, TweenInfo.new(1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, -1, true), {
+        Size = Vector3.new(40, 40, 40),
+        Transparency = 1
+    }):Play()
+
+    -- Esfera negra interna
+    local blackAura = Instance.new("Part")
+    blackAura.Shape = Enum.PartType.Ball
+    blackAura.Anchored = true
+    blackAura.CanCollide = false
+    blackAura.Transparency = 0.2
+    blackAura.Material = Enum.Material.Neon
+    blackAura.Color = Color3.fromRGB(0, 0, 0)
+    blackAura.Size = Vector3.new(1, 1, 1)
+    blackAura.Name = "AuraEffectInner"
+    blackAura.Parent = workspace
+
+    TweenService:Create(blackAura, TweenInfo.new(1.2, Enum.EasingStyle.Sine, Enum.EasingDirection.Out, -1, true), {
+        Size = Vector3.new(6, 6, 6),
+        Transparency = 0.8
+    }):Play()
+
+    -- Seguimiento
+    auraFollowConnection = RunService.RenderStepped:Connect(function()
+        if localPlayer.Character and localPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            local cf = localPlayer.Character.HumanoidRootPart.CFrame
+            redAura.CFrame = cf
+            blackAura.CFrame = cf
+        end
+    end)
+
+    auraEffectMain = redAura
+    auraEffectInner = blackAura
+end
+
+local function removeAura()
+    if auraEffectMain then auraEffectMain:Destroy() auraEffectMain = nil end
+    if auraEffectInner then auraEffectInner:Destroy() auraEffectInner = nil end
+    if auraFollowConnection then auraFollowConnection:Disconnect() auraFollowConnection = nil end
+end
+
+local function startAutoAttack()
+    attackLoop = coroutine.create(function()
+        while attackEnabled do
+            local myCharacter = localPlayer.Character
+            if myCharacter and myCharacter:FindFirstChild("HumanoidRootPart") then
+                local myPos = myCharacter.HumanoidRootPart.Position
+                local nearestEnemy = nil
+                local shortestDistance = math.huge
+
+                for _, player in ipairs(Players:GetPlayers()) do
+                    if player ~= localPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                        local dist = (player.Character.HumanoidRootPart.Position - myPos).Magnitude
+                        if dist < shortestDistance then
+                            shortestDistance = dist
+                            nearestEnemy = player
+                        end
+                    end
+                end
+
+                if nearestEnemy then
+                    local args = {
+                        [1] = nearestEnemy.Character,
+                        [2] = "flame-jet"
+                    }
+                    ReplicatedStorage.Hit:FireServer(unpack(args))
+                end
+            end
+            wait(DelayTime)
+        end
+    end)
+    coroutine.resume(attackLoop)
+end
+
+KillingCheats:CreateToggle("Emperor haki⚡", function(value)
+    attackEnabled = value
+
+    if value then
+        createAura()
+        startAutoAttack()
+    else
+        removeAura()
+        attackEnabled = false
+    end
+end)
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+
+local localPlayer = Players.LocalPlayer
+local attackEnabled = false
+local auraEffectMain = nil
+local auraEffectInner = nil
+local auraFollowConnection = nil
+local attackLoop = nil
+
+local DelayTime = 0.8
+
+local function createAura()
+    local character = localPlayer.Character
+    if not character or not character:FindFirstChild("HumanoidRootPart") then return end
+    local root = character.HumanoidRootPart
+
+    -- Esfera morada principal
+    local purpleAura = Instance.new("Part")
+    purpleAura.Shape = Enum.PartType.Ball
+    purpleAura.Anchored = true
+    purpleAura.CanCollide = false
+    purpleAura.Transparency = 0.4
+    purpleAura.Material = Enum.Material.Neon
+    purpleAura.Color = Color3.fromRGB(170, 0, 255)
+    purpleAura.Size = Vector3.new(1, 1, 1)
+    purpleAura.Name = "AuraEffectMain"
+    purpleAura.Parent = workspace
+
+    TweenService:Create(purpleAura, TweenInfo.new(1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, -1, true), {
+        Size = Vector3.new(25, 25, 25),
+        Transparency = 1
+    }):Play()
+
+    -- Esfera negra interna
+    local blackAura = Instance.new("Part")
+    blackAura.Shape = Enum.PartType.Ball
+    blackAura.Anchored = true
+    blackAura.CanCollide = false
+    blackAura.Transparency = 0.2
+    blackAura.Material = Enum.Material.Neon
+    blackAura.Color = Color3.fromRGB(0, 0, 0)
+    blackAura.Size = Vector3.new(1, 1, 1)
+    blackAura.Name = "AuraEffectInner"
+    blackAura.Parent = workspace
+
+    TweenService:Create(blackAura, TweenInfo.new(1.2, Enum.EasingStyle.Sine, Enum.EasingDirection.Out, -1, true), {
+        Size = Vector3.new(6, 6, 6),
+        Transparency = 0.8
+    }):Play()
+
+    auraFollowConnection = RunService.RenderStepped:Connect(function()
+        if localPlayer.Character and localPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            local cf = localPlayer.Character.HumanoidRootPart.CFrame
+            purpleAura.CFrame = cf
+            blackAura.CFrame = cf
+        end
+    end)
+
+    auraEffectMain = purpleAura
+    auraEffectInner = blackAura
+end
+
+local function removeAura()
+    if auraEffectMain then auraEffectMain:Destroy() auraEffectMain = nil end
+    if auraEffectInner then auraEffectInner:Destroy() auraEffectInner = nil end
+    if auraFollowConnection then auraFollowConnection:Disconnect() auraFollowConnection = nil end
+end
+
+local function startAutoAttack()
+    attackLoop = coroutine.create(function()
+        while attackEnabled do
+            local myCharacter = localPlayer.Character
+            if myCharacter and myCharacter:FindFirstChild("HumanoidRootPart") then
+                local myPos = myCharacter.HumanoidRootPart.Position
+                local nearestEnemy = nil
+                local shortestDistance = math.huge
+
+                for _, player in ipairs(Players:GetPlayers()) do
+                    if player ~= localPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                        local dist = (player.Character.HumanoidRootPart.Position - myPos).Magnitude
+                        if dist < shortestDistance then
+                            shortestDistance = dist
+                            nearestEnemy = player
+                        end
+                    end
+                end
+
+                if nearestEnemy then
+                    local args = {
+                        [1] = nearestEnemy.Character,
+                        [2] = "gravity-crush"
+                    }
+                    ReplicatedStorage.Hit:FireServer(unpack(args))
+                end
+            end
+            wait(DelayTime)
+        end
+    end)
+    coroutine.resume(attackLoop)
+end
+
+KillingCheats:CreateToggle("death zone", function(value)
+    attackEnabled = value
+
+    if value then
+        createAura()
+        startAutoAttack()
+    else
+        removeAura()
+        attackEnabled = false
+    end
+end)
+
+local tspeed = 0
+local minSpeed = 0
+local maxSpeed = 100
+local hb = game:GetService("RunService").Heartbeat
+local tpwalking = true
+local player = game:GetService("Players")
+local lplr = player.LocalPlayer
+local hum
+
+local function isNumber(str)
+    return tonumber(str) ~= nil or str == 'inf'
+end
+
+local function adjustSpeed(newSpeed)
+    if isNumber(newSpeed) then
+        local speedValue = tonumber(newSpeed)
+        if speedValue < minSpeed then
+            tspeed = minSpeed
+        elseif speedValue > maxSpeed then
+            tspeed = maxSpeed
+        else
+            tspeed = speedValue
+        end
+    end
+end
+
+local function setupCharacter()
+    local chr = lplr.Character or lplr.CharacterAdded:Wait()
+    hum = chr:WaitForChild("Humanoid")
+
+    -- Reemplazo de input field por KillingCheats:CreateTextbox
+    KillingCheats:CreateTextbox("Speed", function(text)
+        adjustSpeed(text)
+    end)
+
+    -- Bucle de movimiento
+    spawn(function() -- Usar spawn para permitir que el bucle funcione en paralelo
+        while tpwalking and hb:Wait() and chr and hum and hum.Parent do
+            if hum.MoveDirection.Magnitude > 0 then
+                local adjustedSpeed = tspeed * 0.2  -- Aumenta el multiplicador para velocidad mínima
+                chr:TranslateBy(hum.MoveDirection * adjustedSpeed)
+            end
+        end
+    end)
+end
+
+-- Configurar el personaje al iniciar
+setupCharacter()
+
+-- Conectar la función al evento CharacterAdded
+lplr.CharacterAdded:Connect(function()
+    -- Esperar que el nuevo personaje se configure antes de ejecutar
+    wait(0.5)  -- Espera un breve momento para asegurar que el personaje se cargue
+    setupCharacter()
+end)
