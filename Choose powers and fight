@@ -41,7 +41,7 @@ if prompt then
     -- Teletransportar al LuckyBlock (con altura)
     HRP.CFrame = CFrame.new(targetPart.Position + Vector3.new(0, 3, 0), targetPart.Position)
 
-    task.wait(0.05) -- Breve pausa para que el cambio se registre
+    task.wait(0.6) -- Breve pausa para que el cambio se registre
 
     fireproximityprompt(prompt)
     print("ProximityPrompt activado en:", prompt:GetFullName())
